@@ -10,7 +10,7 @@ class MetricsViewSet(viewsets.mixins.ListModelMixin,
                      viewsets.mixins.CreateModelMixin,
                      viewsets.GenericViewSet):
     permission_classes = [IsArduino]
-    queryset = Metrics.objects.all().order_by('dttm')
+    queryset = Metrics.objects.all().order_by('-dttm')
     serializer_class = MetricsSerializer
     pagination_class = MetricsPagination
 
