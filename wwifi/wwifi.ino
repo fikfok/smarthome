@@ -6,12 +6,18 @@
 
 // библиотека для работы с датчиками MQ (Troyka-модуль)
 #include <TroykaMQ.h>
+
+// библиотека для работы с метеосенсором
+#include <TroykaMeteoSensor.h>
  
 // имя для пина, к которому подключен датчик
 #define PIN_MQ135  A0
 
 // создаём объект для работы с датчиком и передаём ему номер пина
 MQ135 mq135(PIN_MQ135);
+
+// создаём объект для работы с датчиком
+TroykaMeteoSensor meteoSensor;
 
 // создаём объект для работы с программным Serial
 // и передаём ему пины TX и RX
@@ -48,10 +54,46 @@ void setup()
   // перед калибровкой датчика прогрейте его 60 секунд
   // выполняем калибровку датчика на чистом воздухе
   mq135.calibrate();
+
+  // начало работы с датчиком
+  meteoSensor.begin();  
 }
 
 void loop()
 {
+ // считываем данные с датчика
+ int stateSensor = meteoSensor.read();
+  // проверяем состояние данных
+  switch (stateSensor) {
+    case SHT_OK:
+      tmp = meteoSensor.getTemperatureC();
+      // выводим показания влажности и температуры
+      Serial.println("Data sensor is OK");
+      Serial.print("Temperature = ");
+      Serial.print(meteoSensor.getTemperatureC());
+      Serial.println(" C \t");
+      Serial.print("Temperature = ");
+      Serial.print(meteoSensor.getTemperatureK());
+      Serial.println(" K \t");
+      Serial.print("Temperature = ");
+      Serial.print(meteoSensor.getTemperatureF());
+      Serial.println(" F \t");
+      Serial.print("Humidity = ");
+      Serial.print(meteoSensor.getHumidity());
+      Serial.println(" %\r\n");
+      break;
+    // ошибка данных или сенсор не подключён
+    case SHT_ERROR_DATA:
+      tmp = 0;
+      Serial.println("Data error or sensor not connected");
+      break; 
+    // ошибка контрольной суммы
+    case SHT_ERROR_CHECKSUM:
+      tmp = 0;
+      Serial.println("Checksum error");
+      break;
+  }
+  
  String body = "{\"temperature\":" + String(tmp) + ",\"carbon_dioxide\":" + String(mq135.readCO2()) + "}";
  
  String postData = "POST /metrics/ HTTP/1.1\r\n";
@@ -70,10 +112,7 @@ void loop()
 }
 
 void sendCommand(String command, int maxTime, char readReplay[]) {
-//  Serial.print(countTrueCommand);
-//  Serial.print(". at command => ");
-//  Serial.print(command);
-//  Serial.print(" ");
+
   while(countTimeCommand < (maxTime*1))
   {
     WIFI_SERIAL.println(command);//at+cipsend
